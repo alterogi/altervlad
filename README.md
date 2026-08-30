@@ -45,3 +45,12 @@ In your Discord server, simply mention the bot to talk to it:
 `@YourBotName hello there!`
 
 The bot will process your message using the defined `soul.md` personality and respond in the same channel.
+
+### Permissions & Anti-Spam
+To prevent abuse and token wasting:
+- **Character Limit:** Users can only send messages up to 1000 characters.
+- **Token Limit:** The bot will respond with a maximum of 800 tokens.
+- **Permissions System:** Server Administrators can restrict who talks to the bot using commands:
+  - `!allow @user`: Adds a user to the allowlist. (If the allowlist is not empty, *only* allowed users can talk to the bot).
+  - `!deny @user`: Adds a user to the denylist.
+  - `!clear_perm @user`: Removes a user from both lists.
