@@ -12,11 +12,17 @@ load_dotenv()
 # Discord settings
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 
+import time
+
 # AI API Settings (OpenAI compatible)
 API_KEY = os.getenv('API_KEY', '')
 BASE_URL = os.getenv('API_BASE_URL', '') # E.g., 'https://api.deepseek.com/v1' for Deepseek
 MODEL_NAME = os.getenv('MODEL_NAME', 'gpt-3.5-turbo')
 SOUL_FILE = os.getenv('SOUL_FILE', 'soul.md')
+
+# Cooldown Settings
+TOKEN_LIMIT = int(os.getenv('TOKEN_LIMIT', '5000'))
+COOLDOWN_DURATION = int(os.getenv('COOLDOWN_DURATION', '3600'))
 
 # Initialize OpenAI Client (Asynchronous)
 client_kwargs = {'api_key': API_KEY}
@@ -54,6 +60,22 @@ def save_permissions(perms):
     with open(PERMISSIONS_FILE, 'w') as f:
         json.dump(perms, f, indent=4)
 
+USAGE_FILE = 'usage.json'
+
+def load_usage():
+    if not os.path.exists(USAGE_FILE):
+        return {}
+    try:
+        with open(USAGE_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading usage: {e}")
+        return {}
+
+def save_usage(usage):
+    with open(USAGE_FILE, 'w') as f:
+        json.dump(usage, f, indent=4)
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -88,6 +110,18 @@ async def on_message(message):
             await message.reply("Your message is too long. Please keep it under 1000 characters.")
             return
 
+        # Check token usage cooldown
+        usage_data = load_usage()
+        user_usage = usage_data.get(user_id, {"tokens": 0, "cooldown_until": 0})
+
+        current_time = time.time()
+
+        if user_usage["cooldown_until"] > current_time:
+            remaining = int(user_usage["cooldown_until"] - current_time)
+            minutes, seconds = divmod(remaining, 60)
+            await message.reply(f"You are on a cooldown. Please wait {minutes}m {seconds}s before talking to me again.")
+            return
+
         async with message.channel.typing():
             try:
                 # Prepare messages list with the system prompt (soul)
@@ -114,6 +148,21 @@ async def on_message(message):
                         await message.channel.send(ai_reply[i:i+2000])
                 else:
                     await message.reply(ai_reply)
+
+                # Update usage tracking
+                tokens_used = response.usage.total_tokens if response.usage else 0
+
+                # Reset tokens if they had passed their cooldown completely
+                # Though they shouldn't reach here if they were strictly on a cooldown
+                # Let's add tokens to their total. If they hit the limit, set the cooldown.
+                user_usage["tokens"] += tokens_used
+
+                if user_usage["tokens"] >= TOKEN_LIMIT:
+                    user_usage["cooldown_until"] = current_time + COOLDOWN_DURATION
+                    user_usage["tokens"] = 0 # Reset bucket for when cooldown ends
+
+                usage_data[user_id] = user_usage
+                save_usage(usage_data)
 
             except Exception as e:
                 print(f"Error calling AI API: {e}")

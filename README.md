@@ -49,7 +49,8 @@ The bot will process your message using the defined `soul.md` personality and re
 ### Permissions & Anti-Spam
 To prevent abuse and token wasting:
 - **Character Limit:** Users can only send messages up to 1000 characters.
-- **Token Limit:** The bot will respond with a maximum of 800 tokens.
+- **Max Response Tokens:** The bot will respond with a maximum of 800 tokens.
+- **Usage Cooldown:** If a user consumes more than a set limit (e.g., 5000 tokens) across multiple messages, they will be placed on a cooldown (e.g., 1 hour). These can be customized via `.env` (`TOKEN_LIMIT`, `COOLDOWN_DURATION`).
 - **Permissions System:** Server Administrators can restrict who talks to the bot using commands:
   - `!allow @user`: Adds a user to the allowlist. (If the allowlist is not empty, *only* allowed users can talk to the bot).
   - `!deny @user`: Adds a user to the denylist.
