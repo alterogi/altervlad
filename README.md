@@ -1,0 +1,47 @@
+# Discord AI Chatbot with Soul
+
+A lightweight Discord chatbot that uses an AI language model to respond to messages where it's mentioned. It defines its personality through a `soul.md` file and supports any OpenAI-compatible API provider (e.g., OpenAI, Deepseek, local LLMs).
+
+## Features
+
+- **Customizable Personality**: Edit the `soul.md` file to completely change how the bot behaves and responds.
+- **Provider Agnostic**: Connect to any AI provider that supports the OpenAI Python client by changing the `API_BASE_URL` (Deepseek, Groq, Together AI, local models via LM Studio/Ollama, etc.).
+- **Lightweight**: Minimal dependencies, easy to run anywhere.
+
+## Setup
+
+1. **Install Dependencies**
+   Make sure you have Python 3.8+ installed.
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configure the Environment**
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file with your details:
+   - `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications). Make sure to enable the "Message Content Intent" in the Bot settings on the portal.
+   - `API_KEY`: The API key from your chosen provider.
+   - `API_BASE_URL`: The base URL of the API (e.g., `https://api.deepseek.com/v1` for Deepseek, leave blank for OpenAI).
+   - `MODEL_NAME`: The model to use (e.g., `gpt-3.5-turbo`, `deepseek-chat`).
+
+3. **Define the Soul**
+   Edit `soul.md` to define the AI's system prompt. This acts as the core personality and instructions for the bot.
+
+## Running the Bot
+
+Run the bot script:
+
+```bash
+python bot.py
+```
+
+## Usage
+
+In your Discord server, simply mention the bot to talk to it:
+
+`@YourBotName hello there!`
+
+The bot will process your message using the defined `soul.md` personality and respond in the same channel.
