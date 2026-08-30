@@ -1,0 +1,21 @@
+name: altervlad
+
+# Long-running Discord bot. No inbound ports, no Traefik.
+# Secrets live in .env on the host only — never in git / GH Actions.
+
+services:
+  altervlad:
+    build: .
+    container_name: altervlad
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PERMISSIONS_FILE: /app/data/permissions.json
+      USAGE_FILE: /app/data/usage.json
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
