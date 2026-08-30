@@ -55,3 +55,17 @@ To prevent abuse and token wasting:
   - `!allow @user`: Adds a user to the allowlist. (If the allowlist is not empty, *only* allowed users can talk to the bot).
   - `!deny @user`: Adds a user to the denylist.
   - `!clear_perm @user`: Removes a user from both lists.
+
+## Deploy (Docker)
+
+This repo is **public**. Do not put tokens, API keys, or SSH keys in git or in workflow files.
+
+- App secrets (`DISCORD_TOKEN`, `API_KEY`, …) live in a host-only `.env` (see `.env.example`). GitHub Actions never sees them.
+- Push to `main` runs pytest, then SSHes to the compose host with a **forced-command** deploy key (`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_USER` repo secrets). That key can only run the deploy script.
+- Allow/deny + usage JSON persist in `./data` on the host.
+
+```bash
+cp .env.example .env   # fill real values, chmod 600
+mkdir -p data
+docker compose up -d --build
+```
