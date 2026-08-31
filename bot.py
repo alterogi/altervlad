@@ -35,6 +35,7 @@ COOLDOWN_DURATION = int(os.getenv("COOLDOWN_DURATION", "3600"))
 
 PERMISSIONS_FILE = os.getenv("PERMISSIONS_FILE", "permissions.json")
 USAGE_FILE = os.getenv("USAGE_FILE", "usage.json")
+MEMORY_FILE = os.getenv("MEMORY_FILE", "data/memory.json")
 UPDATE_CHANNEL_ID = os.getenv("UPDATE_CHANNEL_ID")
 DEPLOY_INFO_FILE = os.getenv("DEPLOY_INFO_FILE", "data/deployed_info.json")
 DEPLOYED_SHA_FILE = os.getenv("DEPLOYED_SHA_FILE", "data/.deployed_sha")
@@ -44,6 +45,8 @@ client_kwargs = {"api_key": API_KEY}
 if BASE_URL:
     client_kwargs["base_url"] = BASE_URL
 ai_client = AsyncOpenAI(**client_kwargs)
+
+from collections import defaultdict, deque
 
 try:
     with open(SOUL_FILE, "r", encoding="utf-8") as f:
@@ -57,6 +60,9 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 _has_announced_update = False
+
+# Dictionary storing conversation history by channel id (up to 10 latest messages)
+conversation_history = defaultdict(lambda: deque(maxlen=10))
 
 
 def _ensure_parent(path):
@@ -103,6 +109,24 @@ def save_usage(usage):
     _ensure_parent(USAGE_FILE)
     with open(USAGE_FILE, "w", encoding="utf-8") as f:
         json.dump(usage, f, indent=4)
+
+
+def load_memory():
+    if not os.path.exists(MEMORY_FILE):
+        return {}
+    try:
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        print(f"Error loading memory: {e}")
+        return {}
+
+
+def save_memory(memory):
+    _ensure_parent(MEMORY_FILE)
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(memory, f, indent=4)
 
 
 def load_deployed_info() -> dict:
@@ -291,10 +315,20 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                messages = [
-                    {"role": "system", "content": SOUL_PROMPT},
-                    {"role": "user", "content": f"{message.author.display_name}: {user_message}"},
-                ]
+                channel_id = str(message.channel.id)
+                history = list(conversation_history[channel_id])
+
+                system_prompt = SOUL_PROMPT
+                memory = load_memory()
+                if memory:
+                    memory_str = "\n".join(f"- {k}: {v}" for k, v in memory.items())
+                    system_prompt += f"\n\nHere are some things you should remember:\n{memory_str}"
+
+                messages = [{"role": "system", "content": system_prompt}]
+                for entry in history:
+                    messages.append(entry)
+
+                messages.append({"role": "user", "content": f"{message.author.display_name}: {user_message}"})
 
                 response = await ai_client.chat.completions.create(
                     model=MODEL_NAME,
@@ -303,6 +337,10 @@ async def on_message(message):
                 )
 
                 ai_reply = response.choices[0].message.content or ""
+
+                conversation_history[channel_id].append({"role": "user", "content": f"{message.author.display_name}: {user_message}"})
+                conversation_history[channel_id].append({"role": "assistant", "content": ai_reply})
+
                 chunks = split_chunks(ai_reply, 2000)
                 if len(chunks) == 1:
                     await message.reply(chunks[0])
@@ -371,6 +409,38 @@ async def clear_perm(ctx, user: discord.User):
         await ctx.send(f"Permissions cleared for {user.display_name}.")
     else:
         await ctx.send(f"{user.display_name} is not in any list.")
+
+
+@bot.command(name="remember")
+async def remember(ctx, key: str, *, value: str):
+    """Store a piece of information in the bot's memory."""
+    memory = load_memory()
+    memory[key] = value
+    save_memory(memory)
+    await ctx.send(f"I will remember that {key} is {value}.")
+
+
+@bot.command(name="forget")
+async def forget(ctx, key: str):
+    """Forget a piece of information from the bot's memory."""
+    memory = load_memory()
+    if key in memory:
+        del memory[key]
+        save_memory(memory)
+        await ctx.send(f"I have forgotten {key}.")
+    else:
+        await ctx.send(f"I don't have any memory of {key}.")
+
+
+@bot.command(name="memory")
+async def show_memory(ctx):
+    """Show the current contents of the bot's memory."""
+    memory = load_memory()
+    if not memory:
+        await ctx.send("My memory is currently empty.")
+    else:
+        memory_str = "\n".join(f"**{k}**: {v}" for k, v in memory.items())
+        await ctx.send(f"Here is what I remember:\n{memory_str}")
 
 
 @allow_user.error
