@@ -3,10 +3,15 @@ from logic import (
     can_talk,
     cooldown_remaining,
     empty_permissions,
+    format_update_message,
+    format_update_prompt,
+    get_fallback_update_message,
     message_too_long,
+    should_announce_update,
     split_chunks,
     strip_mention,
 )
+
 
 
 def test_empty_allow_and_deny_lets_anyone_talk():
@@ -56,3 +61,54 @@ def test_cooldown_and_token_bucket():
     under = apply_usage({"tokens": 10}, 5, now, token_limit=5000, cooldown_duration=3600)
     assert under["tokens"] == 15
     assert under["cooldown_until"] == 0
+
+
+def test_should_announce_update():
+    assert should_announce_update(None, None) is False
+    assert should_announce_update("", "") is False
+    assert should_announce_update("abc", None) is True
+    assert should_announce_update("abc", "") is True
+    assert should_announce_update("abc", "abc") is False
+    assert should_announce_update("abc", "def") is True
+    assert should_announce_update(" abc \n", "abc") is False
+    assert should_announce_update("abc", " def ") is True
+
+
+def test_format_update_prompt():
+    info = {
+        "sha": "1234567890abcdef",
+        "short_sha": "1234567",
+        "message": "fix a bug in permissions",
+        "author": "Auggie Nastic",
+    }
+    prompt = format_update_prompt(info)
+    assert "Auggie Nastic" in prompt
+    assert "1234567" in prompt
+    assert "fix a bug in permissions" in prompt
+    assert "Vlad" in prompt
+
+
+def test_format_update_message():
+    info = {
+        "short_sha": "abc1234",
+        "message": "updated soul personality",
+        "author": "Auggie",
+    }
+    msg = format_update_message("oh great, another pointless reboot.", info)
+    assert msg.startswith("oh great, another pointless reboot.\n\n> 📦 **Deployed:** `abc1234` — updated soul personality *(Auggie)*")
+
+    # Empty reaction fallback to details card
+    card_only = format_update_message("", info)
+    assert card_only == "> 📦 **Deployed:** `abc1234` — updated soul personality *(Auggie)*"
+
+
+def test_get_fallback_update_message():
+    info = {
+        "sha": "abcdef123456",
+        "message": "rewrite logic",
+        "author": "Auggie",
+    }
+    fallback = get_fallback_update_message(info)
+    assert "auggie just pushed another update" in fallback
+    assert "`abcdef1` — rewrite logic *(Auggie)*" in fallback
+

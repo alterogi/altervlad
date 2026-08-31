@@ -12,6 +12,10 @@ services:
     environment:
       PERMISSIONS_FILE: /app/data/permissions.json
       USAGE_FILE: /app/data/usage.json
+      DEPLOY_INFO_FILE: /app/data/deployed_info.json
+      DEPLOYED_SHA_FILE: /app/data/.deployed_sha
+      LAST_ANNOUNCED_FILE: /app/data/.last_announced_sha
+
     volumes:
       - ./data:/app/data
     logging:

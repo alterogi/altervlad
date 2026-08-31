@@ -56,6 +56,14 @@ To prevent abuse and token wasting:
   - `!deny @user`: Adds a user to the denylist.
   - `!clear_perm @user`: Removes a user from both lists.
 
+### Deployment & Update Announcements
+Whenever new code is pushed to `main` and deployed, the bot will automatically post an update announcement upon reconnecting:
+- **In-Character Commentary:** Vlad generates a sarcastic, cynical reaction to the update and Auggie's code changes.
+- **Commit Details:** Shows the deployed commit hash, message, and author.
+- **Target Channel:** Configure `UPDATE_CHANNEL_ID` in `.env` to pin announcements to a specific channel. If left blank, the bot automatically selects the server's system channel or default general/chat channel.
+- **Deduplication:** State is recorded in persistent `./data` so announcements only trigger once per commit and never spam during routine restarts.
+
+
 ## Deploy (Docker)
 
 This repo is **public**. Do not put tokens, API keys, or SSH keys in git.
