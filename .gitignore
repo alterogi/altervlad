@@ -5,3 +5,4 @@ __pycache__/
 permissions.json
 usage.json
 data/
+/exports/
